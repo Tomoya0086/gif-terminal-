@@ -466,10 +466,10 @@ t.clone_frame(5)
 final_row = 5 + len(skills)
 t.gen_prompt(row_num=final_row)
 t.gen_typing_text(
-    "echo 'Nothing can stay unchanged. Fun things… Happy things…'", row_num=final_row, contin=True, speed=1
+    "echo 'Nothing can stay unchanged. Fun things... Happy things...'", row_num=final_row, contin=True, speed=1
 )
 t.clone_frame(5)
-t.gen_text("\x1b[92mNothing can stay unchanged. Fun things… Happy things…\x1b[0m", row_num=final_row + 1)
+t.gen_text("\x1b[92mNothing can stay unchanged. Fun things... Happy things...\x1b[0m", row_num=final_row + 1)
 t.clone_frame(40)
 
 # ============================================
