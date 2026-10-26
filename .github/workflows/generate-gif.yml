@@ -1,0 +1,70 @@
+name: Generate Terminal GIF
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # daily at 06:00 UTC
+  workflow_dispatch:
+    inputs:
+      theme:
+        description: 'Theme to use (default | macos | debian)'
+        required: false
+        default: 'default'
+      wallpaper:
+        description: 'Wallpaper filename in assets/ for the debian theme (e.g. debian_dark_wallpaper.jpg)'
+        required: false
+        default: ''
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  generate-gif:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Install dependencies
+        run: pip install github-readme-terminal requests python-dotenv Pillow
+
+      - name: Generate GIF
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          # Automatically injected by GitHub — no changes needed when forking.
+          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+          # Select theme via repo variable: Settings → Variables → Actions → THEME
+          # Valid values: default | macos | debian   (fallback: default)
+          THEME: ${{ vars.THEME || inputs.theme || 'default' }}
+          # For the debian theme: filename of the wallpaper inside assets/
+          # Set via repo variable WALLPAPER (e.g. debian_dark_wallpaper.jpg)
+          # Leave empty to use the default (debian_wallpaper.png)
+          WALLPAPER: ${{ vars.WALLPAPER || inputs.wallpaper || '' }}
+        run: |
+          echo "Theme: $THEME  |  Wallpaper: ${WALLPAPER:-default}  |  User: $GITHUB_REPOSITORY_OWNER"
+          case "$THEME" in
+            debian)  python3 generate_debian.py ;;
+            default) python3 generate_with_stats.py ;;
+            *)       python3 generate_liquid_glass.py ;;
+          esac
+
+      - name: Commit and push if changed
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add output.gif
+          git diff --quiet && git diff --staged --quiet || \
+            (git commit -m "Update terminal GIF [skip ci]" && git pull --rebase && git push)

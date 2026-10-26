@@ -1,0 +1,19 @@
+# Python
+*.pyc
+__pycache__/
+.venv/
+.env
+
+# GIF frame cache (generated at runtime by gifos)
+frames/
+
+# macOS
+.DS_Store
+
+# Claude Code
+.claude/
+
+# Dev scripts
+debug_stats.py
+
+# output.gif is intentionally tracked — it is the artifact committed by CI
