@@ -55,11 +55,13 @@ USERNAME = (
 
 # Wallpaper file inside assets/. Override via WALLPAPER repo variable or env var.
 # Example: WALLPAPER=debian_dark_wallpaper.jpg
-_wallpaper_file = os.environ.get("WALLPAPER", "debian_wallpaper.png")
-WALLPAPER_PATH  = os.path.join("assets", _wallpaper_file)
-if not os.path.exists(WALLPAPER_PATH):
-    print(f"Warning: wallpaper '{WALLPAPER_PATH}' not found — falling back to assets/debian_wallpaper.png")
-    WALLPAPER_PATH = "assets/debian_wallpaper.png"
+_wallpaper_file = (os.environ.get("WALLPAPER") or "").strip()
+WALLPAPER_PATH = os.path.join("assets", _wallpaper_file) if _wallpaper_file else ""
+if not (WALLPAPER_PATH and os.path.isfile(WALLPAPER_PATH)):
+    for candidate in ["assets/debian_wallpaper.png", "assets/debian_dark_wallpaper.jpg", "assets/macos_wallpaper.jpg"]:
+        if os.path.isfile(candidate):
+            WALLPAPER_PATH = candidate
+            break
 
 # ---- Layout constants ----
 GIF_W, GIF_H  = 740, 540
@@ -474,18 +476,38 @@ t.clone_frame(40)
 # Post-process frames → Debian theme
 # ============================================
 
-base_canvas, chrome = prepare_debian_layers(WALLPAPER_PATH)
-post_process_frames(base_canvas, chrome)
+try:
+    base_canvas, chrome = prepare_debian_layers(WALLPAPER_PATH)
+    post_process_frames(base_canvas, chrome)
+except Exception as e:
+    print(f"Warning: Failed to apply Debian theme post-processing: {e}")
+    import traceback
+    traceback.print_exc()
 
 # ============================================
 # Generate GIF (ffmpeg preferred, PIL fallback)
 # ============================================
 
-t.gen_gif()
+try:
+    if os.path.exists(OUTPUT_GIF):
+        os.remove(OUTPUT_GIF)
+    t.gen_gif()
+except Exception as e:
+    print(f"Warning: t.gen_gif() encountered an issue: {e}")
 
 if not os.path.exists(OUTPUT_GIF):
-    print("INFO: ffmpeg not available — assembling GIF with PIL fallback...")
-    assemble_gif_with_pil()
+    print("INFO: output.gif not found after t.gen_gif() — attempting direct ffmpeg call...")
+    ret = os.system(
+        f"ffmpeg -y -hide_banner -loglevel warning -r {GIFOS_FPS} -i '{FRAMES_DIR}/{FRAME_BASE}%d.png' -filter_complex '[0:v] split [a][b];[a] palettegen [p];[b][p] paletteuse' {OUTPUT_GIF}"
+    )
+    if ret != 0 or not os.path.exists(OUTPUT_GIF):
+        print("INFO: ffmpeg failed or not available — assembling GIF with PIL fallback...")
+        assemble_gif_with_pil()
+
+if not os.path.exists(OUTPUT_GIF):
+    import sys
+    print("ERROR: Failed to generate output.gif via both ffmpeg and PIL fallback!")
+    sys.exit(1)
 
 print(f"\n GIF generated: {OUTPUT_GIF}")
 print("\nTo use in your README.md:")

@@ -28,7 +28,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GH_TOKEN }}
+          token: ${{ secrets.GH_TOKEN || github.token }}
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -43,7 +43,7 @@ jobs:
 
       - name: Generate GIF
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
           GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
           THEME: ${{ vars.THEME || inputs.theme || 'debian' }}
           WALLPAPER: ${{ vars.WALLPAPER || inputs.wallpaper || '' }}

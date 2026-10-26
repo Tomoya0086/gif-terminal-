@@ -351,14 +351,36 @@ t.clone_frame(40)
 # Post-process frames → Liquid Glass effect
 # ============================================
 
-base_canvas, chrome = prepare_glass_layers("assets/macos_wallpaper.jpg")
-post_process_frames(base_canvas, chrome)
+_wallpaper_file = (os.environ.get("WALLPAPER") or "").strip()
+WALLPAPER_PATH = os.path.join("assets", _wallpaper_file) if _wallpaper_file else ""
+if not (WALLPAPER_PATH and os.path.isfile(WALLPAPER_PATH)):
+    for candidate in ["assets/macos_wallpaper.jpg", "assets/debian_wallpaper.png", "assets/debian_dark_wallpaper.jpg"]:
+        if os.path.isfile(candidate):
+            WALLPAPER_PATH = candidate
+            break
+
+try:
+    base_canvas, chrome = prepare_glass_layers(WALLPAPER_PATH)
+    post_process_frames(base_canvas, chrome)
+except Exception as e:
+    print(f"Warning: Failed to apply Liquid Glass post-processing: {e}")
 
 # ============================================
 # Generate GIF
 # ============================================
 
-t.gen_gif()
+try:
+    if os.path.exists("output.gif"):
+        os.remove("output.gif")
+    t.gen_gif()
+except Exception as e:
+    print(f"Warning: t.gen_gif() encountered an issue: {e}")
+
+if not os.path.exists("output.gif"):
+    print("INFO: output.gif not found after t.gen_gif() — attempting direct ffmpeg call...")
+    os.system(
+        f"ffmpeg -y -hide_banner -loglevel warning -r 20 -i '{FRAMES_DIR}/{FRAME_BASE}%d.png' -filter_complex '[0:v] split [a][b];[a] palettegen [p];[b][p] paletteuse' output.gif"
+    )
 
 print("\n GIF generated: output.gif")
 print("\nTo use in your README.md:")
